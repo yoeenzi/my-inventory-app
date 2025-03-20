@@ -42,11 +42,6 @@ const Header = () => {
         </span>
       </div>
       
-      <div className="search-container">
-        <i className="fas fa-search"></i>
-        <input type="text" placeholder="Search" />
-      </div>
-      
       <div className="user-container">
         <div 
           className="notification-icon"

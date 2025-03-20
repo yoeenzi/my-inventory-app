@@ -1,5 +1,5 @@
 // src/components/Inventory.js
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { formatNumberWithCommas, formatPeso } from '../utils/formatters';
 import { exportToExcel } from '../utils/excelExport';
@@ -19,12 +19,79 @@ const Inventory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
-  // Filter inventory items based on search term
-  const filteredItems = inventoryItems.filter(item => 
-    item.partsName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.partsNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.component.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Add filter states
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState({
+    dateRange: {
+      start: '',
+      end: ''
+    },
+    priceRange: {
+      min: '',
+      max: ''
+    },
+    quantityRange: {
+      min: '',
+      max: ''
+    },
+    components: [],
+    isFiltered: false
+  });
+  
+  // Predefined component categories
+  const componentCategories = ['Engine', 'Hydraulic', 'Electrical', 'Mechanical', 'Body'];
+  
+  // Filter inventory items based on search term and filters
+  const filteredItems = inventoryItems.filter(item => {
+    // Search term filter
+    const matchesSearch = 
+      item.partsName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.partsNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.component.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    // Only apply additional filters if filtering is active
+    if (!filters.isFiltered) return true;
+    
+    // Date range filter
+    if (filters.dateRange.start && filters.dateRange.end) {
+      const itemDate = new Date(item.date);
+      const startDate = new Date(filters.dateRange.start);
+      const endDate = new Date(filters.dateRange.end);
+      endDate.setHours(23, 59, 59); // Include the end date fully
+      
+      if (itemDate < startDate || itemDate > endDate) {
+        return false;
+      }
+    }
+    
+    // Price range filter
+    if (filters.priceRange.min && parseFloat(item.itemPrice) < parseFloat(filters.priceRange.min)) {
+      return false;
+    }
+    if (filters.priceRange.max && parseFloat(item.itemPrice) > parseFloat(filters.priceRange.max)) {
+      return false;
+    }
+    
+    // Quantity range filter
+    if (filters.quantityRange.min && parseInt(item.quantity) < parseInt(filters.quantityRange.min)) {
+      return false;
+    }
+    if (filters.quantityRange.max && parseInt(item.quantity) > parseInt(filters.quantityRange.max)) {
+      return false;
+    }
+    
+    // Component filter - case insensitive comparison
+    if (filters.components.length > 0 && !filters.components.some(comp => 
+      item.component.toLowerCase() === comp.toLowerCase() ||
+      item.component.toLowerCase().includes(comp.toLowerCase())
+    )) {
+      return false;
+    }
+    
+    return true;
+  });
 
   // Calculate pagination
   const indexOfLastItem = currentPage * rowsPerPage;
@@ -32,10 +99,90 @@ const Inventory = () => {
   const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredItems.length / rowsPerPage);
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchTerm]);
+
   // Handle search input change
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  // Handle filter button click
+  const handleFilterClick = () => {
+    setShowFilterModal(true);
+  };
+
+  // Handle filter change
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prevFilters => {
+      // Create a new object to avoid direct state mutation
+      const newFilters = { ...prevFilters };
+      
+      switch (filterType) {
+        case 'dateStart':
+          newFilters.dateRange.start = value;
+          break;
+        case 'dateEnd':
+          newFilters.dateRange.end = value;
+          break;
+        case 'priceMin':
+          newFilters.priceRange.min = value;
+          break;
+        case 'priceMax':
+          newFilters.priceRange.max = value;
+          break;
+        case 'quantityMin':
+          newFilters.quantityRange.min = value;
+          break;
+        case 'quantityMax':
+          newFilters.quantityRange.max = value;
+          break;
+        case 'component':
+          // Toggle component selection
+          if (newFilters.components.includes(value)) {
+            newFilters.components = newFilters.components.filter(comp => comp !== value);
+          } else {
+            newFilters.components = [...newFilters.components, value];
+          }
+          break;
+        default:
+          break;
+      }
+      
+      return newFilters;
+    });
+  };
+
+  // Apply filters
+  const applyFilters = () => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      isFiltered: true
+    }));
+    setShowFilterModal(false);
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      dateRange: {
+        start: '',
+        end: ''
+      },
+      priceRange: {
+        min: '',
+        max: ''
+      },
+      quantityRange: {
+        min: '',
+        max: ''
+      },
+      components: [],
+      isFiltered: false
+    });
+    setShowFilterModal(false);
   };
 
   // Handle view item details
@@ -144,13 +291,180 @@ const Inventory = () => {
           <button className="action-btn excel-btn" onClick={handleExportToExcel}>
             <i className="fas fa-file-excel"></i> Make Excel
           </button>
-          <button className="action-btn filter-btn">
+          <button 
+            className={`action-btn filter-btn ${filters.isFiltered ? 'active' : ''}`} 
+            onClick={handleFilterClick}
+          >
             <i className="fas fa-filter"></i> Filter
+            {filters.isFiltered && <span className="filter-badge"></span>}
           </button>
         </div>
       </div>
       
+          {/* Filter Modal */}
+      {showFilterModal && (
+        <div className="modal-overlay">
+          <div className="filter-modal">
+            <div className="filter-modal-header">
+              <h3><i className="fas fa-filter"></i> Filter Inventory</h3>
+              <button className="close-btn" onClick={() => setShowFilterModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="filter-modal-body">
+              {/* Date Range Filter */}
+              <div className="filter-section">
+                <h4><i className="far fa-calendar-alt"></i> Date Range</h4>
+                <div className="filter-inputs">
+                  <div className="filter-input-group">
+                    <label>From</label>
+                    <input 
+                      type="date" 
+                      value={filters.dateRange.start}
+                      onChange={(e) => handleFilterChange('dateStart', e.target.value)}
+                    />
+                  </div>
+                  <div className="filter-input-group">
+                    <label>To</label>
+                    <input 
+                      type="date" 
+                      value={filters.dateRange.end}
+                      onChange={(e) => handleFilterChange('dateEnd', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Price Range Filter */}
+              <div className="filter-section">
+                <h4><i className="fas fa-tag"></i> Price Range</h4>
+                <div className="filter-inputs">
+                  <div className="filter-input-group">
+                    <label>Min Price</label>
+                    <input 
+                      type="number" 
+                      placeholder="Enter minimum price" 
+                      value={filters.priceRange.min}
+                      onChange={(e) => handleFilterChange('priceMin', e.target.value)}
+                    />
+                  </div>
+                  <div className="filter-input-group">
+                    <label>Max Price</label>
+                    <input 
+                      type="number" 
+                      placeholder="Enter maximum price" 
+                      value={filters.priceRange.max}
+                      onChange={(e) => handleFilterChange('priceMax', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Quantity Range Filter */}
+              <div className="filter-section">
+                <h4><i className="fas fa-box"></i> Quantity Range</h4>
+                <div className="filter-inputs">
+                  <div className="filter-input-group">
+                    <label>Min Quantity</label>
+                    <input 
+                      type="number" 
+                      placeholder="Enter minimum quantity" 
+                      value={filters.quantityRange.min}
+                      onChange={(e) => handleFilterChange('quantityMin', e.target.value)}
+                    />
+                  </div>
+                  <div className="filter-input-group">
+                    <label>Max Quantity</label>
+                    <input 
+                      type="number" 
+                      placeholder="Enter maximum quantity" 
+                      value={filters.quantityRange.max}
+                      onChange={(e) => handleFilterChange('quantityMax', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Component Filter */}
+              <div className="filter-section">
+                <h4><i className="fas fa-cogs"></i> Components</h4>
+                <div className="component-checkboxes">
+                  {componentCategories.map((component, index) => (
+                    <div key={index} className="component-checkbox">
+                      <label>
+                        <input 
+                          type="checkbox" 
+                          checked={filters.components.includes(component)}
+                          onChange={() => handleFilterChange('component', component)}
+                        />
+                        <span>{component}</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="filter-modal-footer">
+              <button className="btn secondary-btn" onClick={clearFilters}>
+                <i className="fas fa-times-circle"></i> Clear Filters
+              </button>
+              <button className="btn primary-btn" onClick={applyFilters}>
+                <i className="fas fa-check-circle"></i> Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="card inventory-card">
+        {/* Filter indicator */}
+        {filters.isFiltered && (
+          <div className="active-filters">
+            <span><i className="fas fa-filter"></i> Active Filters:</span>
+            {(filters.dateRange.start && filters.dateRange.end) && (
+              <div className="filter-tag">
+                <i className="far fa-calendar-alt"></i>
+                {new Date(filters.dateRange.start).toLocaleDateString()} - {new Date(filters.dateRange.end).toLocaleDateString()}
+                <button onClick={() => setFilters({...filters, dateRange: {start: '', end: ''}})}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            )}
+            {(filters.priceRange.min || filters.priceRange.max) && (
+              <div className="filter-tag">
+                <i className="fas fa-tag"></i>
+                {filters.priceRange.min ? formatPeso(filters.priceRange.min) : '₱0'} - {filters.priceRange.max ? formatPeso(filters.priceRange.max) : 'Any'}
+                <button onClick={() => setFilters({...filters, priceRange: {min: '', max: ''}})}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            )}
+            {(filters.quantityRange.min || filters.quantityRange.max) && (
+              <div className="filter-tag">
+                <i className="fas fa-box"></i>
+                {filters.quantityRange.min || '0'} - {filters.quantityRange.max || 'Any'}
+                <button onClick={() => setFilters({...filters, quantityRange: {min: '', max: ''}})}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            )}
+            {filters.components.length > 0 && (
+              <div className="filter-tag">
+                <i className="fas fa-cogs"></i>
+                {filters.components.join(', ')}
+                <button onClick={() => setFilters({...filters, components: []})}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            )}
+            <button className="clear-all-btn" onClick={clearFilters}>
+              <i className="fas fa-trash-alt"></i> Clear All
+            </button>
+          </div>
+        )}
+        
         <div className="inventory-table-container">
           <table className="inventory-table">
             <colgroup>
@@ -239,7 +553,7 @@ const Inventory = () => {
               ) : (
                 <tr>
                   <td colSpan="9" style={{ textAlign: 'center', padding: '20px' }}>
-                    {searchTerm ? 'No items match your search.' : 'No inventory items available. Add an item to get started.'}
+                    {searchTerm || filters.isFiltered ? 'No items match your search or filters.' : 'No inventory items available. Add an item to get started.'}
                   </td>
                 </tr>
               )}
