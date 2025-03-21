@@ -63,7 +63,7 @@ const AddItemModal = () => {
           dateValue = `${year}-${month}-${day}`;
         }
         
-        setFormData({
+        const initialFormData = {
           component: selectedItem.component || '',
           partsName: selectedItem.partsName || '',
           partsNumber: selectedItem.partsNumber || '',
@@ -77,7 +77,12 @@ const AddItemModal = () => {
           totalAmount: selectedItem.totalAmount || 0,
           poNumber: selectedItem.poNumber || '',
           ctplNumber: selectedItem.ctplNumber || ''
-        });
+        };
+        
+        setFormData(initialFormData);
+        
+        // Calculate total with the loaded data
+        calculateTotalWithData(initialFormData);
         
         setUploadedImageData(selectedItem.imageData || null);
       } else {
@@ -89,39 +94,11 @@ const AddItemModal = () => {
     }
   }, [showAddItemModal, selectedItem]);
   
-  // Close modal with fade-out effect
-  const closeModal = () => {
-    setIsVisible(false);
-    setTimeout(() => setShowAddItemModal(false), 300);
-  };
-  
-  // Handle input changes
-  const handleChange = (e) => {
-    const { id, value } = e.target;
-    setFormData({
-      ...formData,
-      [id]: value
-    });
-    
-    // Clear error for this field if it exists
-    if (errors[id]) {
-      setErrors({
-        ...errors,
-        [id]: null
-      });
-    }
-    
-    // Recalculate total amount when price, quantity, or tax changes
-    if (id === 'itemPrice' || id === 'quantity' || id === 'tax') {
-      calculateTotal();
-    }
-  };
-  
-  // Calculate total amount
-  const calculateTotal = () => {
-    const price = parseFloat(formData.itemPrice) || 0;
-    const tax = parseFloat(formData.tax) || 0;
-    const quantity = parseInt(formData.quantity) || 1;
+  // Calculate total amount with specified data
+  const calculateTotalWithData = (data) => {
+    const price = parseFloat(data.itemPrice) || 0;
+    const tax = parseFloat(data.tax) || 0;
+    const quantity = parseInt(data.quantity) || 1;
     
     const total = (price * quantity) + tax;
     
@@ -131,26 +108,100 @@ const AddItemModal = () => {
     }));
   };
   
+  // Effect to recalculate total amount when relevant values change
+  useEffect(() => {
+    const price = parseFloat(formData.itemPrice) || 0;
+    const tax = parseFloat(formData.tax) || 0;
+    const quantity = parseInt(formData.quantity) || 1;
+    
+    const total = (price * quantity) + tax;
+    
+    // Only update if the calculated total is different from current value
+    // to avoid infinite update loop
+    if (parseFloat(formData.totalAmount) !== total) {
+      setFormData(prev => ({
+        ...prev,
+        totalAmount: total.toFixed(2)
+      }));
+    }
+  }, [formData.itemPrice, formData.quantity, formData.tax]);
+  
+  // Close modal with fade-out effect
+  const closeModal = () => {
+    setIsVisible(false);
+    setTimeout(() => setShowAddItemModal(false), 300);
+  };
+  
+  // Handle input changes
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    
+    // Update form data with new value
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+    
+    // Clear error for this field if it exists
+    if (errors[id]) {
+      setErrors({
+        ...errors,
+        [id]: null
+      });
+    }
+  };
+  
   // Handle date change from DatePicker component
-  const handleDateChange = (dateStr) => {
-    // DatePicker returns date in DD/MM/YYYY format
-    if (dateStr) {
-      const [day, month, year] = dateStr.split('/');
+  const handleDateChange = (dateStr, rawDate) => {
+    // Use the raw date object if provided and adjust for the one-day offset
+    if (rawDate && rawDate instanceof Date) {
+      // Create a new date to avoid modifying the original
+      const adjustedDate = new Date(rawDate);
+      // Add one day to compensate for the offset
+      adjustedDate.setDate(adjustedDate.getDate() + 1);
+      
+      const day = String(adjustedDate.getDate()).padStart(2, '0');
+      const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+      const year = adjustedDate.getFullYear();
+      
+      const formattedDate = `${day}/${month}/${year}`;
       const isoDate = `${year}-${month}-${day}`;
       
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         date: isoDate,
-        dateDisplay: dateStr
-      });
+        dateDisplay: formattedDate
+      }));
+    } 
+    // Fallback to string parsing if no raw date object
+    else if (dateStr) {
+      // Parse the date string
+      const [day, month, year] = dateStr.split('/');
       
-      // Clear error if exists
-      if (errors.date) {
-        setErrors({
-          ...errors,
-          date: null
-        });
-      }
+      // Create a date object, adjust it, and format back
+      const dateObj = new Date(`${year}-${month}-${day}`);
+      dateObj.setDate(dateObj.getDate() + 1); // Add one day to compensate
+      
+      const adjustedDay = String(dateObj.getDate()).padStart(2, '0');
+      const adjustedMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const adjustedYear = dateObj.getFullYear();
+      
+      const formattedDate = `${adjustedDay}/${adjustedMonth}/${adjustedYear}`;
+      const isoDate = `${adjustedYear}-${adjustedMonth}-${adjustedDay}`;
+      
+      setFormData(prev => ({
+        ...prev,
+        date: isoDate,
+        dateDisplay: formattedDate
+      }));
+    }
+    
+    // Clear error if exists
+    if (errors.date) {
+      setErrors(prev => ({
+        ...prev,
+        date: null
+      }));
     }
   };
   
@@ -195,7 +246,7 @@ const AddItemModal = () => {
   
   // Reset form to initial state
   const resetForm = () => {
-    setFormData({
+    const initialFormData = {
       component: '',
       partsName: '',
       partsNumber: '',
@@ -209,7 +260,9 @@ const AddItemModal = () => {
       totalAmount: 0,
       poNumber: '',
       ctplNumber: ''
-    });
+    };
+    
+    setFormData(initialFormData);
     setUploadedImageData(null);
     setErrors({});
   };
@@ -531,6 +584,7 @@ const AddItemModal = () => {
                         onChange={handleDateChange}
                         placeholder="DD/MM/YYYY"
                         className={errors.date ? 'error' : ''}
+                        useRawDate={true} // Add this prop to pass raw date object
                         customInput={
                           <div className="date-input-wrapper">
                             <input
