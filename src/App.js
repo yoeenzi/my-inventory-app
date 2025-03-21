@@ -18,7 +18,7 @@ import NotificationDropdown from './components/Dropdowns/NotificationDropdown';
 
 // Import styles
 import './styles/App.css';
-import './styles/ModalStyles.css'; // Add this line
+import './styles/ModalStyles.css';
 
 function App() {
   const { activeSection, isDarkMode } = useContext(AppContext);

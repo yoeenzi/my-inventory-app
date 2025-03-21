@@ -1029,3 +1029,385 @@ body.dark-mode .btn-secondary:hover {
     height: 160px;
   }
 }
+/* Enhanced QR Code Styles - Add to ModalStyles.css */
+
+/* Item QR Code Section */
+.item-qr-section {
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 15px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eaeaea;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.item-qr-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.item-qr-section .section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 10px;
+}
+
+.item-qr-section .section-header i {
+  color: #3498db;
+  font-size: 16px;
+}
+
+.item-qr-section .section-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.qr-description {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.qr-content {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.qr-code-frame {
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.qr-code-frame:after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  bottom: -5px;
+  left: -5px;
+  border: 2px dashed #eaeaea;
+  border-radius: 12px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.qr-code-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.qr-info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+.qr-info-item i {
+  color: #3498db;
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+}
+
+.qr-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.qr-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qr-action-btn.view-btn {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
+}
+
+.qr-action-btn.print-btn {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  box-shadow: 0 2px 5px rgba(46, 204, 113, 0.3);
+}
+
+.qr-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qr-action-btn:active {
+  transform: translateY(0);
+}
+
+/* QR Code Modal Overlay with fade animation */
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100; /* Higher than the main modal */
+  transition: background-color 0.3s ease;
+  backdrop-filter: blur(0px);
+}
+
+.qr-modal-overlay.visible {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+/* QR Modal Content with animation */
+.qr-modal-content {
+  background-color: #fff;
+  width: 90%;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(30px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+.qr-modal-content.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* QR Modal Header */
+.qr-modal-header {
+  background: linear-gradient(135deg, #3498db, #1a5276);
+  padding: 1rem 1.5rem;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: none;
+}
+
+.qr-modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* QR Modal Body */
+.qr-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  gap: 1.5rem;
+}
+
+/* QR Code Container with border and shadow */
+.qr-code-container {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  border: 1px solid #eaeaea;
+}
+
+.qr-code-container:after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  bottom: -5px;
+  left: -5px;
+  border: 2px dashed #eaeaea;
+  border-radius: 16px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* QR Info Card */
+.qr-info-card {
+  width: 100%;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eaeaea;
+}
+
+.qr-info-header {
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 0.7rem;
+  margin-bottom: 0.7rem;
+}
+
+.qr-info-header h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  line-height: 1.3;
+}
+
+.qr-info-id {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  display: block;
+}
+
+.qr-info-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.qr-info-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.qr-info-label {
+  font-weight: 500;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.qr-info-value {
+  color: #2c3e50;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* QR Modal Footer */
+.qr-modal-footer {
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid #eaeaea;
+  background-color: #f8f9fa;
+}
+
+/* Dark Mode Support */
+body.dark-mode .qr-modal-content {
+  background-color: #1a2a48;
+  border-color: #2a3a5a;
+}
+
+body.dark-mode .qr-modal-header {
+  background: linear-gradient(135deg, #1f3a60, #0f2a50);
+}
+
+body.dark-mode .qr-code-container {
+  background-color: #fff; /* Keep QR background white for better scanning */
+  border-color: #2a3a5a;
+}
+
+body.dark-mode .qr-code-container:after {
+  border-color: #2a3a5a;
+}
+
+body.dark-mode .qr-info-card {
+  background-color: #1f2c3d;
+  border-color: #2a3a5a;
+}
+
+body.dark-mode .qr-info-header {
+  border-color: #2a3a5a;
+}
+
+body.dark-mode .qr-info-header h4 {
+  color: #ecf0f1;
+}
+
+body.dark-mode .qr-info-id {
+  color: #a5b1c2;
+}
+
+body.dark-mode .qr-info-label {
+  color: #a5b1c2;
+}
+
+body.dark-mode .qr-info-value {
+  color: #ecf0f1;
+}
+
+body.dark-mode .qr-modal-footer {
+  background-color: #15203b;
+  border-color: #2a3a5a;
+}
+
+/* QR Modal Responsive Adjustments */
+@media (max-width: 768px) {
+  .qr-modal-content {
+    width: 95%;
+    max-height: 85vh;
+  }
+  
+  .qr-code-container {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .qr-modal-body {
+    padding: 1rem;
+  }
+  
+  .qr-info-row {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .qr-info-value {
+    text-align: left;
+  }
+  
+  .qr-modal-content {
+    max-height: 80vh;
+  }
+}
