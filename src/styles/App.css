@@ -2415,3 +2415,193 @@ tr:hover td.price-column:before {
     width: 100%;
   }
 }
+/* Enhanced Import Button Styles - Add to your App.css file */
+
+/* Base import button style */
+.import-btn {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+  border: none;
+  font-weight: 500;
+  padding: 8px 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Hover effect */
+.import-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(46, 204, 113, 0.4);
+  background: linear-gradient(135deg, #219653 0%, #27ae60 100%);
+}
+
+/* Active/click effect */
+.import-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(46, 204, 113, 0.3);
+}
+
+/* Icon styling */
+.import-btn i {
+  font-size: 15px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Optional pulse animation for the icon */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Add ripple effect on click */
+.import-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.import-btn:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+/* Dark mode compatibility */
+.dark-mode .import-btn {
+  background: linear-gradient(135deg, #219653 0%, #27ae60 100%);
+  box-shadow: 0 4px 8px rgba(46, 204, 113, 0.2);
+}
+
+.dark-mode .import-btn:hover {
+  background: linear-gradient(135deg, #1e874b 0%, #219653 100%);
+  box-shadow: 0 6px 12px rgba(46, 204, 113, 0.3);
+}
+
+/* Optional tooltip */
+.import-btn-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.import-btn-wrapper .tooltip {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.import-btn-wrapper .tooltip::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 6px 6px 6px;
+  border-style: solid;
+  border-color: transparent transparent #333 transparent;
+}
+
+.import-btn-wrapper:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  bottom: -35px;
+}
+
+/* Make the button more prominent when it's the main action */
+.action-buttons .import-btn {
+  padding: 9px 16px;
+  font-size: 15px;
+}
+/* Scan Button Styles */
+.scan-btn {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
+  border: none;
+  font-weight: 500;
+}
+
+.scan-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(155, 89, 182, 0.4);
+  background: linear-gradient(135deg, #8e44ad 0%, #6c3483 100%);
+}
+
+.scan-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(155, 89, 182, 0.3);
+}
+
+.scan-btn i {
+  font-size: 15px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Dark Mode Compatibility for Button */
+.dark-mode .scan-btn {
+  background: linear-gradient(135deg, #8e44ad 0%, #6c3483 100%);
+  box-shadow: 0 4px 8px rgba(155, 89, 182, 0.2);
+}
+
+.dark-mode .scan-btn:hover {
+  background: linear-gradient(135deg, #7d3c98 0%, #6c3483 100%);
+  box-shadow: 0 6px 12px rgba(155, 89, 182, 0.3);
+}

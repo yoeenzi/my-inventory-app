@@ -1411,3 +1411,458 @@ body.dark-mode .qr-modal-footer {
     max-height: 80vh;
   }
 }
+/* Camera Scanner Styles */
+.scanner-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  margin: 0 auto 20px;
+  background-color: #f0f2f5;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e0e0e0;
+}
+
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Fixed Scanner Frame with proper alignment */
+.scanner-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80%;
+  height: 60%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Blue guidelines */
+.scanner-horizontal-line, 
+.scanner-vertical-line {
+  position: absolute;
+  background-color: rgba(52, 152, 219, 0.7);
+  z-index: 1;
+}
+
+.scanner-horizontal-line {
+  height: 2px;
+  width: 100%;
+}
+
+.scanner-horizontal-line.top {
+  top: 0;
+}
+
+.scanner-horizontal-line.bottom {
+  bottom: 0;
+}
+
+.scanner-vertical-line {
+  width: 2px;
+  height: 100%;
+}
+
+.scanner-vertical-line.left {
+  left: 0;
+}
+
+.scanner-vertical-line.right {
+  right: 0;
+}
+
+/* Corner markers */
+.corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: #3498db;
+  border-style: solid;
+  z-index: 2;
+}
+
+.top-left {
+  top: 0;
+  left: 0;
+  border-width: 3px 0 0 3px;
+  border-top-left-radius: 8px;
+}
+
+.top-right {
+  top: 0;
+  right: 0;
+  border-width: 3px 3px 0 0;
+  border-top-right-radius: 8px;
+}
+
+.bottom-left {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 3px 3px;
+  border-bottom-left-radius: 8px;
+}
+
+.bottom-right {
+  bottom: 0;
+  right: 0;
+  border-width: 0 3px 3px 0;
+  border-bottom-right-radius: 8px;
+}
+
+/* Capture Button */
+.capture-btn {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ffffff;
+  color: #3498db;
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  z-index: 20;
+}
+
+.capture-btn:hover {
+  background-color: #3498db;
+  color: white;
+  transform: translateX(-50%) scale(1.1);
+}
+
+.capture-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.capture-btn:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Captured Image Container */
+.uploaded-image-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  margin: 0 auto 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+  border: 1px solid #e0e0e0;
+}
+
+.uploaded-barcode-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Analysis Indicators */
+.analyzing-badge {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 20;
+}
+
+.analyzing-badge-text {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.success-badge {
+  background-color: rgba(39, 174, 96, 0.8);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Retry Button */
+.retry-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  z-index: 20;
+}
+
+.retry-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Scanner instructions */
+.scanner-instructions {
+  text-align: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #3498db;
+}
+
+.scanner-instructions p {
+  margin: 5px 0;
+  color: #333;
+  font-weight: 500;
+}
+
+.scanner-tip {
+  font-size: 13px;
+  color: #777;
+  font-style: italic;
+}
+
+/* Camera selection */
+.camera-selection {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background-color: #f0f2f5;
+  border-radius: 8px;
+}
+
+.camera-selection label {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.camera-select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: white;
+  color: #333;
+}
+
+/* Upload Image Button */
+.upload-image-btn {
+  background-color: #f0f2f5 !important;
+  color: #555 !important;
+  border: 1px solid #ddd !important;
+  transition: all 0.2s ease;
+}
+
+.upload-image-btn:hover {
+  background-color: #e6e9ed !important;
+  color: #3498db !important;
+}
+
+/* Manual Entry Form */
+.manual-entry-form {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 10px;
+}
+
+.manual-entry-form h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Required field indicator */
+.required {
+  color: #e74c3c;
+  margin-left: 3px;
+}
+
+/* Error Message */
+.error-message {
+  margin: 10px 0;
+  color: #e74c3c;
+  text-align: center;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background-color: rgba(231, 76, 60, 0.1);
+  border-radius: 5px;
+}
+
+/* Form input error state */
+.form-group input.error,
+.form-group select.error {
+  border-color: #e74c3c;
+}
+
+/* Dark Mode Compatibility */
+.dark-mode .scanner-container,
+.dark-mode .uploaded-image-container {
+  background-color: #1f305e;
+  border-color: #2a3a5a;
+}
+
+.dark-mode .scanner-frame .corner {
+  border-color: #3498db;
+}
+
+.dark-mode .capture-btn {
+  background-color: #2a3a5a;
+  color: #3498db;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .capture-btn:hover {
+  background-color: #3498db;
+  color: white;
+}
+
+.dark-mode .scanner-instructions {
+  background-color: #1f2c3d;
+  border-left-color: #3498db;
+}
+
+.dark-mode .scanner-instructions p {
+  color: #f0f0f0;
+}
+
+.dark-mode .scanner-tip {
+  color: #a0aec0;
+}
+
+.dark-mode .camera-selection {
+  background-color: #1f2c3d;
+}
+
+.dark-mode .camera-selection label {
+  color: #f0f0f0;
+}
+
+.dark-mode .camera-select {
+  background-color: #2d3748;
+  border-color: #2a3a5a;
+  color: #f0f0f0;
+}
+
+.dark-mode .upload-image-btn {
+  background-color: #1f2c3d !important;
+  border-color: #2a3a5a !important;
+  color: #a0aec0 !important;
+}
+
+.dark-mode .upload-image-btn:hover {
+  background-color: #263340 !important;
+  color: #3498db !important;
+}
+
+.dark-mode .manual-entry-form {
+  background-color: #16213e;
+}
+
+.dark-mode .manual-entry-form h4 {
+  color: #f0f0f0;
+  border-bottom-color: #2a3a5a;
+}
+
+.dark-mode .error-message {
+  background-color: rgba(231, 76, 60, 0.2);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .scanner-container,
+  .uploaded-image-container {
+    height: 250px;
+  }
+  
+  .capture-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .camera-selection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .camera-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .scanner-container,
+  .uploaded-image-container {
+    height: 200px;
+  }
+  
+  .capture-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+  
+  .analyzer-badge-text,
+  .success-badge {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .retry-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  
+  .scanner-instructions p {
+    font-size: 14px;
+  }
+  
+  .scanner-tip {
+    font-size: 12px;
+  }
+}

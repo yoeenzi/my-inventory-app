@@ -200,6 +200,76 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Function to import inventory items from Excel
+  const importItemsToInventory = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+    
+    // Clone the current items array
+    const updatedItems = [...inventoryItems];
+    const newItems = [];
+    
+    // Process each imported item
+    items.forEach(newItem => {
+      const existingItemIndex = updatedItems.findIndex(
+        item => item.partsNumber === newItem.partsNumber
+      );
+      
+      if (existingItemIndex >= 0) {
+        // Update existing item (merge properties)
+        const updatedItem = {
+          ...updatedItems[existingItemIndex],
+          // Preserve the original ID
+          id: updatedItems[existingItemIndex].id,
+          // Update quantity
+          quantity: parseInt(updatedItems[existingItemIndex].quantity) + parseInt(newItem.quantity)
+        };
+        
+        // Only update other fields if they exist in the new item
+        if (newItem.partsName) updatedItem.partsName = newItem.partsName;
+        if (newItem.component) updatedItem.component = newItem.component;
+        if (newItem.itemPrice) updatedItem.itemPrice = parseFloat(newItem.itemPrice);
+        if (newItem.rack) updatedItem.rack = newItem.rack;
+        if (newItem.tax) updatedItem.tax = parseFloat(newItem.tax);
+        if (newItem.totalAmount) updatedItem.totalAmount = parseFloat(newItem.totalAmount);
+        if (newItem.pic) updatedItem.pic = newItem.pic;
+        if (newItem.poNumber) updatedItem.poNumber = newItem.poNumber;
+        if (newItem.ctplNumber) updatedItem.ctplNumber = newItem.ctplNumber;
+        
+        updatedItems[existingItemIndex] = updatedItem;
+        
+        // Add notification for updated item
+        addNotification({
+          type: 'stock-in',
+          title: `Updated: ${updatedItem.partsName}`,
+          productNumber: `Part #${updatedItem.partsNumber}`,
+          quantity: `+${newItem.quantity} units`
+        });
+      } else {
+        // Add new item
+        newItems.push(newItem);
+        
+        // Add notification for new item
+        addNotification({
+          type: 'stock-in',
+          title: `New Item: ${newItem.partsName}`,
+          productNumber: `Part #${newItem.partsNumber}`,
+          quantity: `+${newItem.quantity} units`
+        });
+      }
+    });
+    
+    // Update state with modified and new items
+    setInventoryItems([...newItems, ...updatedItems]);
+    
+    // Update stock data (simplified - in a real app, you'd recalculate this)
+    const totalNewQuantity = items.reduce((total, item) => total + parseInt(item.quantity || 0), 0);
+    setStockData(prevData => ({
+      ...prevData,
+      itemsInHand: prevData.itemsInHand + totalNewQuantity,
+      stockIn: prevData.stockIn + totalNewQuantity
+    }));
+  };
+
   // Function to mark all notifications as read
   const markAllNotificationsAsRead = () => {
     setNotifications(notifications.map(notification => ({
@@ -249,6 +319,7 @@ export const AppProvider = ({ children }) => {
     addInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,
+    importItemsToInventory, // Add the new import function
     notifications,
     unreadCount,
     markAllNotificationsAsRead,
@@ -264,7 +335,7 @@ export const AppProvider = ({ children }) => {
     setShowNotificationDropdown,
     selectedItem,
     setSelectedItem,
-    showViewItemModal,    // Add this line
+    showViewItemModal,
     setShowViewItemModal,
   };
 

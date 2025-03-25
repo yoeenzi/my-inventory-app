@@ -758,3 +758,101 @@
       height: 150px;
     }
   }
+  /* Add these styles to your ScanStyles.css file */
+
+/* Scanner viewport and video container */
+.scanner-viewport {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #000;
+}
+
+/* Direct video element styles */
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1;
+}
+
+/* Canvas for drawing */
+.scanner-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2; /* Above video */
+}
+
+/* Quagga elements */
+.drawingBuffer {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 2;
+}
+
+/* Overlay with scanning frame */
+.scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3; /* Above canvas */
+  pointer-events: none;
+}
+
+/* Error message display */
+.scanner-error, 
+.scanner-error-message {
+  background-color: rgba(231, 76, 60, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  text-align: center;
+  margin: 10px 0;
+  font-weight: 500;
+}
+
+/* Custom scanner elements */
+.scanning-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  z-index: 10;
+}
+
+/* Adjust scan success animation */
+@keyframes scan-flash {
+  0%, 100% { background-color: #1f2c3d; }
+  50% { background-color: #27ae60; }
+}
+
+.scanner-container.scan-success {
+  animation: scan-flash 0.5s ease;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .scanner-viewport {
+    height: 200px;
+  }
+  
+  .scanning-frame {
+    width: 150px;
+    height: 150px;
+  }
+}

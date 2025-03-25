@@ -1,10 +1,14 @@
 // src/components/ScanItem.js
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
+import Quagga from '@ericblade/quagga2'; // Using quagga2 for better maintenance and compatibility
 import '../styles/ScanStyles.css';
 
 const ScanItem = () => {
   const { addNotification } = useContext(AppContext);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   
   // State for form data
   const [formData, setFormData] = useState({
@@ -14,8 +18,10 @@ const ScanItem = () => {
     notes: ''
   });
   
-  // Scanner animation state
+  // Scanner state
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
   const [recentScans, setRecentScans] = useState([
     { id: '1001AC', type: 'in', timestamp: '10:25 AM', status: 'success' },
     { id: '2043BX', type: 'out', timestamp: '09:12 AM', status: 'success' }
@@ -64,7 +70,7 @@ const ScanItem = () => {
       notes: ''
     });
     
-    // Show success message with toast instead of alert
+    // Show success message with toast
     const toast = document.createElement('div');
     toast.className = 'toast success';
     toast.innerHTML = `
@@ -85,50 +91,148 @@ const ScanItem = () => {
     }, 3000);
   };
   
-  // Simulate enabling camera
-  const enableCamera = () => {
+  // Initialize Quagga directly without relying on video element
+  const startBarcodeScanner = () => {
+    setErrorMessage('');
     setIsScanning(true);
     
-    // Simulating a scan after 3 seconds
-    setTimeout(() => {
-      const mockItemId = Math.floor(1000 + Math.random() * 9000) + 
-                         String.fromCharCode(65 + Math.floor(Math.random() * 26)) + 
-                         String.fromCharCode(65 + Math.floor(Math.random() * 26));
-      
-      setFormData({
-        ...formData,
-        itemId: mockItemId
-      });
-      
-      setRecentScans([
-        {
-          id: mockItemId,
-          type: 'in',
-          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          status: 'success'
+    if (!containerRef.current) {
+      setErrorMessage('Scanner container not found');
+      setIsScanning(false);
+      return;
+    }
+    
+    // Clear any existing content to prevent duplicate elements
+    while (containerRef.current.firstChild) {
+      containerRef.current.removeChild(containerRef.current.firstChild);
+    }
+    
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: containerRef.current,
+        constraints: {
+          width: { min: 450 },
+          height: { min: 300 },
+          facingMode: "environment",
+          aspectRatio: { min: 1, max: 2 }
         },
-        ...recentScans.slice(0, 4)
-      ]);
+      },
+      locator: {
+        patchSize: "medium",
+        halfSample: true
+      },
+      numOfWorkers: 2,
+      frequency: 10,
+      decoder: {
+        readers: [
+          "code_128_reader",
+          "ean_reader", 
+          "ean_8_reader",
+          "code_39_reader",
+          "upc_reader",
+          "upc_e_reader"
+        ]
+      },
+      locate: true
+    }, function(err) {
+      if (err) {
+        console.error("Quagga initialization error:", err);
+        setErrorMessage(`Camera error: ${err.message || JSON.stringify(err)}`);
+        setIsScanning(false);
+        return;
+      }
       
-      // Play a success sound
-      const audio = new Audio('/assets/sounds/beep.mp3');
-      audio.play().catch(() => {
-        // Handle audio play errors silently
-      });
+      console.log("Quagga initialized successfully");
       
-      // Flash the scanner
-      const scanner = document.querySelector('.scanner-container');
-      scanner.classList.add('scan-success');
-      setTimeout(() => {
-        scanner.classList.remove('scan-success');
-      }, 500);
-    }, 3000);
+      // Start barcode detection
+      Quagga.start();
+      
+      // Store the video stream for cleanup
+      const videoTrack = Quagga.CameraAccess.getActiveTrack();
+      if (videoTrack && videoTrack.getSettings) {
+        console.log("Camera settings:", videoTrack.getSettings());
+      }
+      
+      // Handle barcode detection
+      Quagga.onDetected(handleBarcodeDetected);
+    });
   };
   
-  // Stop scanning simulation
+  // Handle detected barcode
+  const handleBarcodeDetected = (result) => {
+    if (result && result.codeResult) {
+      const scannedCode = result.codeResult.code;
+      console.log("Barcode detected:", scannedCode, "with format:", result.codeResult.format);
+      
+      // Only accept codes with good confidence
+      if (result.codeResult.confidence > 0.7) {
+        // Update form with the scanned barcode
+        setFormData(prev => ({
+          ...prev,
+          itemId: scannedCode
+        }));
+        
+        // Add to recent scans
+        setRecentScans(prev => [
+          {
+            id: scannedCode,
+            type: formData.transactionType,
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            status: 'success'
+          },
+          ...prev.slice(0, 4)
+        ]);
+        
+        // Play a success sound
+        try {
+          const audio = new Audio('/assets/sounds/beep.mp3');
+          audio.play().catch(e => console.log("Sound play error:", e));
+        } catch (e) {
+          console.log("Sound error:", e);
+        }
+        
+        // Flash the scanner
+        const scanner = document.querySelector('.scanner-container');
+        if (scanner) {
+          scanner.classList.add('scan-success');
+          setTimeout(() => {
+            scanner.classList.remove('scan-success');
+          }, 500);
+        }
+        
+        // Pause scanning briefly to prevent multiple scans
+        Quagga.pause();
+        setTimeout(() => {
+          if (isScanning) {
+            Quagga.start();
+          }
+        }, 1500);
+      }
+    }
+  };
+  
+  // Stop scanning and clean up
   const stopScanning = () => {
+    try {
+      Quagga.stop();
+      console.log("Quagga scanner stopped");
+    } catch (e) {
+      console.log("Quagga stop error:", e);
+    }
+    
     setIsScanning(false);
   };
+  
+  // Clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      try {
+        Quagga.stop();
+      } catch (e) {}
+    };
+  }, []);
 
   return (
     <div className="content-section scan-section">
@@ -154,15 +258,18 @@ const ScanItem = () => {
             <div className={`scanner-container ${isScanning ? 'active' : ''}`}>
               {isScanning ? (
                 <>
-                  <div className="scanner-viewport">
-                    <video id="scannerVideo" autoPlay playsInline muted></video>
-                    <div className="scanning-frame">
-                      <div className="corner top-left"></div>
-                      <div className="corner top-right"></div>
-                      <div className="corner bottom-left"></div>
-                      <div className="corner bottom-right"></div>
-                      <div className="scanning-line"></div>
+                  <div className="scanner-viewport" ref={containerRef}>
+                    {/* Quagga will insert video and canvas elements here */}
+                    <div className="scanner-overlay">
+                      <div className="scanning-frame">
+                        <div className="corner top-left"></div>
+                        <div className="corner top-right"></div>
+                        <div className="corner bottom-left"></div>
+                        <div className="corner bottom-right"></div>
+                        <div className="scanning-line"></div>
+                      </div>
                     </div>
+                    {errorMessage && <div className="scanner-error">{errorMessage}</div>}
                   </div>
                   <button className="scanner-control-btn stop" onClick={stopScanning}>
                     <i className="fas fa-stop"></i> Stop Scanning
@@ -173,7 +280,8 @@ const ScanItem = () => {
                   <div className="scanner-placeholder">
                     <i className="fas fa-qrcode scanner-icon"></i>
                     <div className="scanner-text">Camera access required</div>
-                    <button className="scanner-control-btn start" onClick={enableCamera}>
+                    {errorMessage && <div className="scanner-error-message">{errorMessage}</div>}
+                    <button className="scanner-control-btn start" onClick={startBarcodeScanner}>
                       <i className="fas fa-camera"></i> Enable Camera
                     </button>
                   </div>

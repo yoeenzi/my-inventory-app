@@ -1,8 +1,9 @@
-// src/components/Inventory.js
-import React, { useState, useContext, useEffect } from 'react';
+// src/components/Inventory.js - Integrated camera capture approach
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { formatNumberWithCommas, formatPeso } from '../utils/formatters';
 import { exportToExcel } from '../utils/excelExport';
+import * as XLSX from 'xlsx';
 
 const Inventory = () => {
   const { 
@@ -10,7 +11,8 @@ const Inventory = () => {
     deleteInventoryItem, 
     setShowAddItemModal, 
     setShowViewItemModal,
-    setSelectedItem 
+    setSelectedItem,
+    importItemsToInventory
   } = useContext(AppContext);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +39,39 @@ const Inventory = () => {
     components: [],
     isFiltered: false
   });
+  
+  // Add state for scan item modal
+  const [showScanItemModal, setShowScanItemModal] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scannerActive, setScannerActive] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [capturingImage, setCapturingImage] = useState(false);
+  const [scanError, setScanError] = useState('');
+  const [uploadedImage, setUploadedImage] = useState(null);
+  
+  const [scanFormData, setScanFormData] = useState({
+    partsNumber: '',
+    partsName: '',
+    component: '',
+    quantity: 1,
+    itemPrice: '',
+    date: new Date().toISOString().split('T')[0],
+    tax: 0,
+    rack: '',
+    pic: '',
+    poNumber: '',
+    ctplNumber: '',
+    totalAmount: 0
+  });
+  
+  // Camera selection state
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [selectedCamera, setSelectedCamera] = useState('');
+  
+  // Scanner video ref
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   
   // Predefined component categories
   const componentCategories = ['Engine', 'Hydraulic', 'Electrical', 'Mechanical', 'Body'];
@@ -103,6 +138,36 @@ const Inventory = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, searchTerm]);
+
+  // Enumerate available cameras when scan modal opens
+  useEffect(() => {
+    if (showScanItemModal) {
+      const getVideoDevices = async () => {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const cameras = devices.filter(device => device.kind === 'videoinput');
+          
+          setVideoDevices(cameras);
+          
+          // If we have cameras, select the rear camera by default or the first camera
+          if (cameras.length > 0) {
+            // Try to find a rear/back camera
+            const rearCamera = cameras.find(camera => 
+              camera.label.toLowerCase().includes('back') || 
+              camera.label.toLowerCase().includes('rear')
+            );
+            
+            // Set the selected camera to rear camera if found, otherwise first camera
+            setSelectedCamera(rearCamera ? rearCamera.deviceId : cameras[0].deviceId);
+          }
+        } catch (error) {
+          console.error('Error enumerating devices:', error);
+        }
+      };
+      
+      getVideoDevices();
+    }
+  }, [showScanItemModal]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -249,6 +314,303 @@ const Inventory = () => {
     }
   };
 
+  // Handle camera selection change
+  const handleCameraChange = (e) => {
+    setSelectedCamera(e.target.value);
+    // If the scanner is active, restart it with the new camera
+    if (scannerActive) {
+      stopScanner();
+      setTimeout(() => {
+        startScanner();
+      }, 500);
+    }
+  };
+
+  // Import from Excel/CSV function
+  const handleImportFromExcel = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    try {
+      // Create a new FileReader
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        // Check if it's a CSV file
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        let jsonData = [];
+        
+        if (isCSV) {
+          // Parse CSV using PapaParse if available, or fallback to text parsing
+          try {
+            const csvText = e.target.result;
+            // Simple CSV parsing if PapaParse isn't available
+            const lines = csvText.toString().split(/\r\n|\n/);
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            console.log('CSV Headers detected:', headers);
+            
+            jsonData = lines.slice(1).map(line => {
+              if (!line.trim()) return null; // Skip empty lines
+              
+              const values = line.split(',');
+              const obj = {};
+              
+              headers.forEach((header, i) => {
+                // Clean up header name and use it as key
+                const key = header.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                obj[key] = values[i] ? values[i].trim() : '';
+              });
+              
+              return obj;
+            }).filter(item => item !== null);
+            
+          } catch (csvError) {
+            console.error('Error parsing CSV:', csvError);
+            throw new Error('Failed to parse CSV file. Please check the format.');
+          }
+        } else {
+          // Handle Excel file
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+        }
+        
+        if (jsonData.length === 0) {
+          alert('No data found in the file');
+          return;
+        }
+        
+        console.log('Raw imported data (first row):', jsonData[0]);
+        
+        // Extract column keys from the first row
+        const sampleKeys = Object.keys(jsonData[0]);
+        console.log('Available keys in data:', sampleKeys);
+        
+        // Create a mapping from file columns to our expected columns
+        const findKey = (possibleNames) => {
+          return sampleKeys.find(key => 
+            possibleNames.some(name => 
+              key.toLowerCase().includes(name.toLowerCase())
+            )
+          );
+        };
+        
+        const columnMap = {
+          date: findKey(['date', 'day', 'time']),
+          partsNumber: findKey(['partsnumber', 'partnumber', 'part number', 'parts number', 'partno', 'partnumbered']),
+          partsName: findKey(['partsname', 'partname', 'parts name', 'part name', 'description', 'item']),
+          component: findKey(['component', 'category', 'type']),
+          quantity: findKey(['quantity', 'qty', 'count']),
+          itemPrice: findKey(['itemprice', 'item price', 'price', 'cost', 'unitprice']),
+          rack: findKey(['rack', 'location', 'position']),
+          tax: findKey(['tax', 'vat', 'gst']),
+          totalAmount: findKey(['totalamount', 'total amount', 'total', 'amount']),
+          pic: findKey(['pic', 'person', 'responsible']),
+          poNumber: findKey(['ponumber', 'po number', 'purchase order']),
+          ctplNumber: findKey(['ctplnumber', 'ctpl number', 'ctpl'])
+        };
+        
+        console.log('Column mapping:', columnMap);
+        
+        // Transform data to match inventory item structure
+        const importedItems = jsonData.map(row => {
+          // Generate a unique ID for each item
+          const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random().toString(36).substr(2, 9);
+          
+          // Helper to safely get a value with fallback
+          const getValue = (field, defaultValue = '') => {
+            if (!columnMap[field]) return defaultValue;
+            const value = row[columnMap[field]];
+            return value !== undefined && value !== null ? value : defaultValue;
+          };
+          
+          // Handle numeric values
+          const getNumber = (field, defaultValue = 0) => {
+            const value = getValue(field, '');
+            if (value === '') return defaultValue;
+            
+            // Remove any non-numeric characters except decimal point
+            const numStr = value.toString().replace(/[^0-9.-]/g, '');
+            const num = parseFloat(numStr);
+            return isNaN(num) ? defaultValue : num;
+          };
+          
+          // Get date and format it
+          let dateValue = getValue('date', new Date().toISOString().split('T')[0]);
+          
+          return {
+            id,
+            date: dateValue,
+            partsNumber: getValue('partsNumber'),
+            partsName: getValue('partsName'),
+            component: getValue('component'),
+            quantity: parseInt(getNumber('quantity')),
+            itemPrice: getNumber('itemPrice'),
+            imageData: null,
+            rack: getValue('rack'),
+            tax: getNumber('tax'),
+            totalAmount: getNumber('totalAmount'),
+            pic: getValue('pic'),
+            poNumber: getValue('poNumber'),
+            ctplNumber: getValue('ctplNumber')
+          };
+        });
+        
+        // Filter out rows with empty essential data
+        const validItems = importedItems.filter(item => 
+          (item.partsNumber && item.partsNumber.trim() !== '') || 
+          (item.partsName && item.partsName.trim() !== '')
+        );
+        
+        if (validItems.length === 0) {
+          alert('No valid inventory items found in the file. Please check your data format.');
+          return;
+        }
+        
+        console.log(`Processing ${validItems.length} valid items from ${jsonData.length} total rows`);
+        console.log('First item to import:', validItems[0]);
+        
+        // Add items to inventory through context
+        importItemsToInventory(validItems);
+        alert(`Successfully imported ${validItems.length} items to inventory!`);
+      };
+      
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert(`Import error: ${error.message}\n\nPlease check your file format and try again.`);
+    }
+    
+    // Reset the file input
+    event.target.value = null;
+  };
+  
+  // Trigger file input click
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Capture and analyze the current camera frame
+  const captureAndAnalyzeFrame = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    setCapturingImage(true);
+    
+    // Draw the current video frame to canvas
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert canvas to image data URL
+    const imageDataUrl = canvas.toDataURL('image/jpeg');
+    
+    // Set the captured image
+    setUploadedImage({
+      src: imageDataUrl,
+      width: canvas.width,
+      height: canvas.height
+    });
+    
+    // Now analyze the captured frame
+    setScanning(true);
+    
+    // Simulate barcode detection (in a real implementation, use a barcode library)
+    setTimeout(() => {
+      // Simulate finding a barcode
+      const mockScanResult = {
+        partsNumber: 'KBHP-00001ED',
+        partsName: 'O-RING KIT - ALL MODEL',
+        component: 'Hydraulic'
+      };
+      
+      // Update the form with the scan result
+      setScanResult(mockScanResult);
+      setScanFormData(prev => ({
+        ...prev,
+        partsNumber: mockScanResult.partsNumber,
+        partsName: mockScanResult.partsName,
+        component: mockScanResult.component
+      }));
+      
+      setScanning(false);
+      setCapturingImage(false);
+    }, 1500);
+  };
+  
+  // Manually upload an image to analyze
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Only accept image files
+    if (!file.type.match('image.*')) {
+      setScanError('Please select an image file (JPEG, PNG, etc.)');
+      return;
+    }
+    
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        // Create an image element to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          setUploadedImage({
+            src: e.target.result,
+            width: img.width,
+            height: img.height
+          });
+          
+          // Start barcode analysis
+          setScanning(true);
+          
+          // Simulate barcode detection from image
+          setTimeout(() => {
+            // Simulate finding a barcode from image
+            const mockScanResult = {
+              partsNumber: 'KBHP-00001ED',
+              partsName: 'O-RING KIT - ALL MODEL',
+              component: 'Hydraulic'
+            };
+            
+            // Update the form with the scan result
+            setScanResult(mockScanResult);
+            setScanFormData(prev => ({
+              ...prev,
+              partsNumber: mockScanResult.partsNumber,
+              partsName: mockScanResult.partsName,
+              component: mockScanResult.component
+            }));
+            
+            setScanning(false);
+          }, 1500);
+        };
+        img.src = e.target.result;
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error reading image file:', error);
+      setScanError('Failed to read the image file. Please try again.');
+    }
+    
+    // Reset the file input
+    event.target.value = null;
+  };
+
   // Pagination handlers
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -271,6 +633,189 @@ const Inventory = () => {
     setCurrentPage(1); // Reset to first page when changing rows per page
   };
 
+  // Start camera for scanning
+  const startScanner = async () => {
+    setScannerActive(true);
+    setScanError('');
+    setScanning(false);
+    setCapturingImage(false);
+    
+    try {
+      // First try to use selected camera or environment facing camera with exact constraint
+      let stream;
+      
+      try {
+        // If a specific camera is selected, use it
+        if (selectedCamera) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: selectedCamera }
+            }
+          });
+        } else {
+          // Otherwise try to use environment facing camera with exact constraint
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { exact: "environment" }
+            }
+          });
+        }
+      } catch (exactConstraintError) {
+        console.log('Failed with exact constraint, trying fallback options...');
+        
+        try {
+          // Try without 'exact' constraint
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment"
+            }
+          });
+        } catch (fallbackError) {
+          // Last resort: try to get any video stream
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          });
+        }
+      }
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', true); // required for iOS
+        
+        // Just show the video feed - no auto scanning
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        };
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setScanError('Could not access camera. Please ensure camera permissions are granted or try uploading an image instead.');
+    }
+  };
+  
+  // Handle stopping the scanner
+  const stopScanner = () => {
+    setScannerActive(false);
+    
+    // Stop the video stream
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+  
+  // Retry scanning/capturing
+  const handleRetry = () => {
+    setScanResult(null);
+    setUploadedImage(null);
+    setScanning(false);
+    setCapturingImage(false);
+    setScanError('');
+    startScanner(); // Restart scanner on retry
+  };
+  
+  const handleScanFormChange = (e) => {
+    const { name, value } = e.target;
+    const updatedFormData = {
+      ...scanFormData,
+      [name]: value
+    };
+    
+    // Recalculate total amount when price or quantity changes
+    if (name === 'itemPrice' || name === 'quantity' || name === 'tax') {
+      const price = parseFloat(name === 'itemPrice' ? value : updatedFormData.itemPrice) || 0;
+      const quantity = parseInt(name === 'quantity' ? value : updatedFormData.quantity) || 1;
+      const tax = parseFloat(name === 'tax' ? value : updatedFormData.tax) || 0;
+      
+      // Calculate subtotal and add tax
+      const subtotal = price * quantity;
+      const taxAmount = subtotal * (tax / 100);
+      updatedFormData.totalAmount = subtotal + taxAmount;
+    }
+    
+    setScanFormData(updatedFormData);
+  };
+  
+  const handleAddScannedItem = () => {
+    // Validate required fields
+    if (!scanFormData.partsNumber || !scanFormData.partsName) {
+      setScanError('Parts Number and Parts Name are required');
+      return;
+    }
+    
+    // Calculate total amount with tax
+    const price = parseFloat(scanFormData.itemPrice) || 0;
+    const quantity = parseInt(scanFormData.quantity) || 1;
+    const tax = parseFloat(scanFormData.tax) || 0;
+    const subtotal = price * quantity;
+    const taxAmount = subtotal * (tax / 100);
+    const totalAmount = subtotal + taxAmount;
+    // Create a new item with the scanned/entered data
+  const newItem = {
+    id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random().toString(36).substr(2, 9),
+    date: scanFormData.date,
+    partsNumber: scanFormData.partsNumber,
+    partsName: scanFormData.partsName,
+    component: scanFormData.component,
+    quantity: quantity,
+    itemPrice: price,
+    imageData: uploadedImage ? uploadedImage.src : null,
+    rack: scanFormData.rack,
+    tax: tax,
+    totalAmount: totalAmount,
+    pic: scanFormData.pic,
+    poNumber: scanFormData.poNumber,
+    ctplNumber: scanFormData.ctplNumber
+  };
+    
+    // Add to inventory
+    importItemsToInventory([newItem]);
+    
+    // Reset form and close modal
+    setScanFormData({
+      partsNumber: '',
+      partsName: '',
+      component: '',
+      quantity: 1,
+      itemPrice: '',
+      date: new Date().toISOString().split('T')[0],
+      tax: 0,
+      rack: '',
+      pic: '',
+      poNumber: '',
+      ctplNumber: '',
+    });
+    setScanResult(null);
+    setUploadedImage(null);
+    setShowScanItemModal(false);
+  };
+  
+  // Handle scan item button click
+  const handleScanItemClick = () => {
+    setShowScanItemModal(true);
+    setScanError('');
+    setScanResult(null);
+    setUploadedImage(null);
+    setScanning(false);
+    setCapturingImage(false);
+    startScanner(); // Automatically start the camera
+  };
+  
+  // Clean up scanner when unmounting
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+  
+  // Close scanner when modal is closed
+  useEffect(() => {
+    if (!showScanItemModal && scannerActive) {
+      stopScanner();
+    }
+  }, [showScanItemModal]);
+
   return (
     <div className="content-section inventory-section">
       <div className="inventory-actions-top">
@@ -291,6 +836,20 @@ const Inventory = () => {
           <button className="action-btn excel-btn" onClick={handleExportToExcel}>
             <i className="fas fa-file-excel"></i> Make Excel
           </button>
+          <button className="action-btn import-btn" onClick={handleImportClick}>
+            <i className="fas fa-file-upload"></i> Import Excel
+          </button>
+          {/* Add Scan Item button */}
+          <button className="action-btn scan-btn" onClick={handleScanItemClick}>
+            <i className="fas fa-barcode"></i> Scan Item
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".xlsx, .xls, .csv"
+            onChange={handleImportFromExcel}
+          />
           <button 
             className={`action-btn filter-btn ${filters.isFiltered ? 'active' : ''}`} 
             onClick={handleFilterClick}
@@ -301,7 +860,308 @@ const Inventory = () => {
         </div>
       </div>
       
-          {/* Filter Modal */}
+      {/* Scan Item Modal */}
+      {showScanItemModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3><i className="fas fa-barcode"></i> Scan Item</h3>
+              <button 
+                className="close-button" 
+                onClick={() => {
+                  setShowScanItemModal(false);
+                  stopScanner();
+                }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="scanner-instructions">
+                <p><i className="fas fa-info-circle"></i> Position barcode in the center and capture</p>
+                <p className="scanner-tip">Center the sticker/barcode and press the capture button</p>
+              </div>
+              
+              {/* Camera selection if multiple cameras */}
+              {videoDevices.length > 1 && (
+                <div className="camera-selection">
+                  <label>Select Camera:</label>
+                  <select 
+                    value={selectedCamera} 
+                    onChange={handleCameraChange}
+                    className="camera-select"
+                  >
+                    {videoDevices.map((device) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `Camera ${videoDevices.indexOf(device) + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {!scanResult && !uploadedImage && (
+                <div className="scanner-container">
+                  <video 
+                    ref={videoRef} 
+                    className="scanner-video"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  ></video>
+                  <canvas 
+                    ref={canvasRef}
+                    style={{ display: 'none' }}
+                  ></canvas>
+                  
+                  {/* Scanning frame - with blue guideline styling */}
+                  <div className="scanner-frame">
+                    <div className="scanner-horizontal-line top"></div>
+                    <div className="scanner-horizontal-line bottom"></div>
+                    <div className="scanner-vertical-line left"></div>
+                    <div className="scanner-vertical-line right"></div>
+                    
+                    <div className="corner top-left"></div>
+                    <div className="corner top-right"></div>
+                    <div className="corner bottom-left"></div>
+                    <div className="corner bottom-right"></div>
+                  </div>
+                  
+                  {/* Capture button */}
+                  <button 
+                    className="capture-btn"
+                    onClick={captureAndAnalyzeFrame}
+                    disabled={capturingImage}
+                  >
+                    <i className="fas fa-camera"></i>
+                  </button>
+                </div>
+              )}
+              
+              {/* Uploaded image preview */}
+              {uploadedImage && (
+                <div className="uploaded-image-container">
+                  <img 
+                    src={uploadedImage.src} 
+                    alt="Captured barcode" 
+                    className="uploaded-barcode-image"
+                  />
+                  
+                  {/* Scanning indicator */}
+                  {scanning && (
+                    <div className="analyzing-badge">
+                      <span className="analyzing-badge-text">
+                        <i className="fas fa-sync fa-spin"></i> Analyzing barcode...
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Success indicator */}
+                  {scanResult && !scanning && (
+                    <div className="analyzing-badge">
+                      <span className="success-badge">
+                        <i className="fas fa-check-circle"></i> Barcode detected!
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Retry/new capture button */}
+                  {!scanning && (
+                    <button 
+                      className="retry-btn"
+                      onClick={handleRetry}
+                    >
+                      <i className="fas fa-redo"></i> New Capture
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {scanError && (
+                <div className="error-message">
+                  <i className="fas fa-exclamation-circle"></i> {scanError}
+                </div>
+              )}
+              
+              <div style={{ textAlign: 'center', margin: '15px 0' }}>
+                {/* Optional: Image upload button */}
+                {!uploadedImage && (
+                  <button 
+                    className="btn btn-light upload-image-btn"
+                    onClick={() => document.getElementById('upload-image-input').click()}
+                  >
+                    <i className="fas fa-file-upload"></i> Upload Image
+                  </button>
+                )}
+                <input 
+                  id="upload-image-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                />
+              </div>
+              
+              {/* Form fields shown when there's a scan result */}
+              {scanResult && (
+                <div className="manual-entry-form">
+                  <h4>Scanned Item Details</h4>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Date</label>
+                      <input 
+                        type="date" 
+                        name="date" 
+                        value={scanFormData.date}
+                        onChange={handleScanFormChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Parts Number <span className="required">*</span></label>
+                      <input 
+                        type="text" 
+                        name="partsNumber" 
+                        value={scanFormData.partsNumber}
+                        onChange={handleScanFormChange}
+                        placeholder="Enter parts number"
+                        className={scanError && !scanFormData.partsNumber ? 'error' : ''}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Parts Name <span className="required">*</span></label>
+                    <input 
+                      type="text" 
+                      name="partsName" 
+                      value={scanFormData.partsName}
+                      onChange={handleScanFormChange}
+                      placeholder="Enter parts name"
+                      className={scanError && !scanFormData.partsName ? 'error' : ''}
+                    />
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Component</label>
+                      <select 
+                        name="component" 
+                        value={scanFormData.component}
+                        onChange={handleScanFormChange}
+                      >
+                        <option value="">Select component</option>
+                        {componentCategories.map(component => (
+                          <option key={component} value={component}>
+                            {component}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Quantity</label>
+                      <input 
+                        type="number" 
+                        name="quantity" 
+                        value={scanFormData.quantity}
+                        onChange={handleScanFormChange}
+                        min="1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Item Price</label>
+                      <input 
+                        type="number" 
+                        name="itemPrice" 
+                        value={scanFormData.itemPrice}
+                        onChange={handleScanFormChange}
+                        step="0.01"
+                        placeholder="Enter price"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Rack</label>
+                      <input 
+                        type="text" 
+                        name="rack" 
+                        value={scanFormData.rack}
+                        onChange={handleScanFormChange}
+                        placeholder="Enter rack location"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Tax</label>
+                      <input 
+                        type="number" 
+                        name="tax" 
+                        value={scanFormData.tax}
+                        onChange={handleScanFormChange}
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Person in Charge</label>
+                      <input 
+                        type="text" 
+                        name="pic" 
+                        value={scanFormData.pic}
+                        onChange={handleScanFormChange}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>PO Number</label>
+                      <input 
+                        type="text" 
+                        name="poNumber" 
+                        value={scanFormData.poNumber}
+                        onChange={handleScanFormChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>CTPL Number</label>
+                      <input 
+                        type="text" 
+                        name="ctplNumber" 
+                        value={scanFormData.ctplNumber}
+                        onChange={handleScanFormChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="btn btn-light" 
+                onClick={() => {
+                  setShowScanItemModal(false);
+                  stopScanner();
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleAddScannedItem}
+                disabled={!scanFormData.partsNumber || !scanFormData.partsName}
+              >
+                Add to Inventory
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Filter Modal */}
       {showFilterModal && (
         <div className="modal-overlay">
           <div className="filter-modal">

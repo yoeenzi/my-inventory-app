@@ -20,7 +20,7 @@ const ViewItemModal = () => {
   const [isStickerModalVisible, setIsStickerModalVisible] = useState(false);
   
   // Path to your Canva-designed sticker background (update this path)
-  const stickerBackgroundPath = "/assets/acd corporation.png";
+  const stickerBackgroundPath = "/assets/acd corp.png";
   
   useEffect(() => {
     if (showViewItemModal) {
@@ -130,7 +130,7 @@ const handlePrintSticker = () => {
         <!-- Print-specific styles -->
         <style type="text/css" media="print">
           .part-number, .part-name {
-            color: #FFFFFF !important;
+            color: #012f8e !important;
             -webkit-print-color-adjust: exact !important;
             color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -186,7 +186,7 @@ const handlePrintSticker = () => {
             left: 30px;
             font-size: 22px;
             font-weight: bold;
-            color: #FFFFFF !important; /* Force white with !important */
+            color: #012f8e !important; /* Force white with !important */
             text-shadow: 0 0 1px rgba(0,0,0,0.5);
             opacity: 1;
             -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
@@ -202,7 +202,7 @@ const handlePrintSticker = () => {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            color: #FFFFFF !important; /* Force white with !important */
+            color: #012f8e !important; /* Force white with !important */
             text-shadow: 0 0 1px rgba(0,0,0,0.5);
             opacity: 1;
             -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
@@ -711,7 +711,7 @@ const handlePrintSticker = () => {
                   left: '30px',
                   fontSize: '18px',
                   fontWeight: 'bold',
-                  color: 'white',
+                  color: '#012f8e',
                   textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                 }}>
                   {selectedItem.partsNumber}
@@ -723,7 +723,7 @@ const handlePrintSticker = () => {
                   top: '100px',
                   left: '30px',
                   fontSize: '14px',
-                  color: 'white',
+                  color: '#012f8e',
                   maxWidth: '160px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
