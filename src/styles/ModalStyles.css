@@ -1866,3 +1866,53 @@ body.dark-mode .qr-modal-footer {
     font-size: 12px;
   }
 }
+/* Add these styles to your ModalStyles.css file */
+
+/* QR Code Dark Mode Styles */
+.qr-code-frame.dark-mode {
+  background-color: #1a2a48;
+  border-color: #2a3a5a;
+}
+
+.qr-code-container.dark-mode {
+  background-color: #1a2a48;
+  border-color: #2a3a5a;
+}
+
+.item-qr-section.dark-mode .qr-description {
+  color: #a5b1c2;
+}
+
+.item-qr-section.dark-mode .qr-info-item {
+  color: #a5b1c2;
+}
+
+.item-qr-section.dark-mode .qr-info-item i {
+  color: #7eb6ff;
+}
+
+/* Make sure text in the QR modal is properly colored */
+body.dark-mode .qr-modal-content .qr-info-card {
+  background-color: #1f2c3d; 
+}
+
+body.dark-mode .qr-modal-content .qr-info-header h4 {
+  color: #ecf0f1;
+}
+
+body.dark-mode .qr-modal-content .qr-info-id {
+  color: #a5b1c2;
+}
+
+body.dark-mode .qr-modal-content .qr-info-label {
+  color: #a5b1c2;
+}
+
+body.dark-mode .qr-modal-content .qr-info-value {
+  color: #ecf0f1;
+}
+
+/* Fix for the QR code frame in dark mode */
+body.dark-mode .qr-code-frame:after {
+  border-color: #2a3a5a;
+}
