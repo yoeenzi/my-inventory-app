@@ -110,8 +110,14 @@ export const AppProvider = ({ children }) => {
     }
   ]);
 
-  // Save dark mode preference to localStorage
+  // Apply dark mode class to body element when isDarkMode changes
   useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+    // Save preference to localStorage
     localStorage.setItem('darkMode', isDarkMode);
   }, [isDarkMode]);
 
@@ -319,7 +325,7 @@ export const AppProvider = ({ children }) => {
     addInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,
-    importItemsToInventory, // Add the new import function
+    importItemsToInventory,
     notifications,
     unreadCount,
     markAllNotificationsAsRead,

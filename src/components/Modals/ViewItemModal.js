@@ -19,6 +19,9 @@ const ViewItemModal = () => {
   const [showStickerModal, setShowStickerModal] = useState(false);
   const [isStickerModalVisible, setIsStickerModalVisible] = useState(false);
   
+  // Add state to track dark mode
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
   // Path to your Canva-designed sticker background (update this path)
   const stickerBackgroundPath = "/assets/acd corp.png";
   
@@ -34,6 +37,24 @@ const ViewItemModal = () => {
       setIsStickerModalVisible(false); // Reset sticker modal visibility
     }
   }, [showViewItemModal]);
+  
+  // Check for dark mode and add event listener to track changes
+  useEffect(() => {
+    // Check initial dark mode state
+    const checkDarkMode = () => {
+      setIsDarkMode(document.body.classList.contains('dark-mode'));
+    };
+    
+    // Set initial state
+    checkDarkMode();
+    
+    // Add an observer to track changes to body class (for dark mode toggle)
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    
+    // Clean up observer
+    return () => observer.disconnect();
+  }, []);
   
   // Close modal with fade-out effect
   const closeModal = () => {
@@ -110,213 +131,214 @@ const ViewItemModal = () => {
     return JSON.stringify(qrData);
   };
 
-// Function to handle printing sticker with Canva design
-const handlePrintSticker = () => {
-  const printWindow = window.open('', '_blank');
-  
-  if (printWindow) {
-    // Get QR code data
-    const qrData = generateQRData();
+  // Function to handle printing sticker with Canva design
+  const handlePrintSticker = () => {
+    const printWindow = window.open('', '_blank');
     
-    // Use the full URL path for the background image
-    // This ensures the image is properly loaded in the new window
-    const fullBackgroundPath = window.location.origin + stickerBackgroundPath;
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Sticker - ${selectedItem.partsName}</title>
-        <!-- Print-specific styles -->
-        <style type="text/css" media="print">
-          .part-number, .part-name {
-            color: #012f8e !important;
-            -webkit-print-color-adjust: exact !important;
-            color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-        </style>
-        <style>
-          /* Thermal printer optimized styles */
-          @page {
-            size: 320px 190px; /* Match the exact size of preview */
-            margin: 0;
-          }
-          
-          body {
-            margin: 0;
-            padding: 0;
-            width: 320px;
-            height: 190px;
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-            position: relative;
-            -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
-            color-adjust: exact !important; /* Firefox */
-          }
-          
-          .sticker-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-          }
-          
-          .sticker-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            object-fit: cover;
-          }
-          
-          .content-wrapper {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            height: 100%;
-          }
-          
-          .part-number {
-            position: absolute;
-            top: 70px;
-            left: 30px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #012f8e !important; /* Force white with !important */
-            text-shadow: 0 0 1px rgba(0,0,0,0.5);
-            opacity: 1;
-            -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
-            color-adjust: exact !important; /* Firefox */
-          }
-          
-          .part-name {
-            position: absolute;
-            top: 105px;
-            left: 30px;
-            font-size: 16px;
-            max-width: 160px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: #012f8e !important; /* Force white with !important */
-            text-shadow: 0 0 1px rgba(0,0,0,0.5);
-            opacity: 1;
-            -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
-            color-adjust: exact !important; /* Firefox */
-          }
-          
-          .qr-code {
-            position: absolute;
-            top: 55px;
-            right: 30px;
-            background-color: white;
-            padding: 4px;
-            border-radius: 3px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            width: 80px;
-            height: 80px;
-          }
-        </style>
-        <!-- Import qrcode.js library -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-      </head>
-      <body onload="generateQR()">
-        <div class="sticker-container">
-          <!-- Background image (your Canva design) -->
-          <img src="${fullBackgroundPath}" class="sticker-background" alt="Sticker Background" onload="checkImageLoaded(this)" onerror="handleImageError(this)" />
-          
-          <div class="content-wrapper">
-            <!-- Dynamic content positioned over the background -->
-            <div class="part-number">${selectedItem.partsNumber}</div>
-            <div class="part-name">${selectedItem.partsName}</div>
+    if (printWindow) {
+      // Get QR code data
+      const qrData = generateQRData();
+      
+      // Use the full URL path for the background image
+      // This ensures the image is properly loaded in the new window
+      const fullBackgroundPath = window.location.origin + stickerBackgroundPath;
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Sticker - ${selectedItem.partsName}</title>
+          <!-- Print-specific styles -->
+          <style type="text/css" media="print">
+            .part-number, .part-name {
+              color: #012f8e !important;
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          </style>
+          <style>
+            /* Thermal printer optimized styles */
+            @page {
+              size: 320px 190px; /* Match the exact size of preview */
+              margin: 0;
+            }
             
-            <!-- QR Code container -->
-            <div class="qr-code" id="qrcode"></div>
+            body {
+              margin: 0;
+              padding: 0;
+              width: 320px;
+              height: 190px;
+              overflow: hidden;
+              font-family: 'Arial', sans-serif;
+              position: relative;
+              -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
+              color-adjust: exact !important; /* Firefox */
+            }
+            
+            .sticker-container {
+              position: relative;
+              width: 100%;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+            }
+            
+            .sticker-background {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              z-index: 1;
+              object-fit: cover;
+            }
+            
+            .content-wrapper {
+              position: relative;
+              z-index: 2;
+              width: 100%;
+              height: 100%;
+            }
+            
+            .part-number {
+              position: absolute;
+              top: 70px;
+              left: 30px;
+              font-size: 22px;
+              font-weight: bold;
+              color: #012f8e !important; /* Force white with !important */
+              text-shadow: 0 0 1px rgba(0,0,0,0.5);
+              opacity: 1;
+              -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
+              color-adjust: exact !important; /* Firefox */
+            }
+            
+            .part-name {
+              position: absolute;
+              top: 105px;
+              left: 30px;
+              font-size: 16px;
+              max-width: 160px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              color: #012f8e !important; /* Force white with !important */
+              text-shadow: 0 0 1px rgba(0,0,0,0.5);
+              opacity: 1;
+              -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
+              color-adjust: exact !important; /* Firefox */
+            }
+            
+            .qr-code {
+              position: absolute;
+              top: 55px;
+              right: 30px;
+              background-color: white;
+              padding: 4px;
+              border-radius: 3px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+              width: 80px;
+              height: 80px;
+            }
+          </style>
+          <!-- Import qrcode.js library -->
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        </head>
+        <body onload="generateQR()">
+          <div class="sticker-container">
+            <!-- Background image (your Canva design) -->
+            <img src="${fullBackgroundPath}" class="sticker-background" alt="Sticker Background" onload="checkImageLoaded(this)" onerror="handleImageError(this)" />
+            
+            <div class="content-wrapper">
+              <!-- Dynamic content positioned over the background -->
+              <div class="part-number">${selectedItem.partsNumber}</div>
+              <div class="part-name">${selectedItem.partsName}</div>
+              
+              <!-- QR Code container -->
+              <div class="qr-code" id="qrcode"></div>
+            </div>
           </div>
-        </div>
-        
-        <script>
-          // Function to check if image loaded correctly
-          function checkImageLoaded(img) {
-            console.log("Image loaded successfully:", img.src);
-            // After a short delay to ensure everything is ready, print the page
-            setTimeout(printAndClose, 800);
-          }
           
-          // Handle image loading error
-          function handleImageError(img) {
-            console.error("Failed to load image:", img.src);
-            // Create a fallback text to show instead of image
-            const container = img.parentNode;
-            const fallbackDiv = document.createElement('div');
-            fallbackDiv.style.position = 'absolute';
-            fallbackDiv.style.top = '0';
-            fallbackDiv.style.left = '0';
-            fallbackDiv.style.width = '100%';
-            fallbackDiv.style.height = '100%';
-            fallbackDiv.style.backgroundColor = '#2c3e50';
-            fallbackDiv.style.zIndex = '1';
-            container.appendChild(fallbackDiv);
-            
-            // Add company name as text
-            const companyText = document.createElement('div');
-            companyText.textContent = "ACD Corporation";
-            companyText.style.position = 'absolute';
-            companyText.style.top = '20px';
-            companyText.style.left = '30px';
-            companyText.style.color = 'white';
-            companyText.style.fontWeight = 'bold';
-            companyText.style.zIndex = '2';
-            container.appendChild(companyText);
-            
-            // After a short delay to ensure everything is ready, print the page
-            setTimeout(printAndClose, 800);
-          }
-          
-          // Function to generate the QR code
-          function generateQR() {
-            try {
-              // Create QR code
-              new QRCode(document.getElementById("qrcode"), {
-                text: ${JSON.stringify(qrData)},
-                width: 80,
-                height: 80,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-              });
-              console.log("QR code generated successfully");
-            } catch(err) {
-              console.error("Error generating QR code:", err);
+          <script>
+            // Function to check if image loaded correctly
+            function checkImageLoaded(img) {
+              console.log("Image loaded successfully:", img.src);
+              // After a short delay to ensure everything is ready, print the page
+              setTimeout(printAndClose, 800);
             }
-          }
-          
-          // Function to print and close the window
-          function printAndClose() {
-            try {
-              window.print();
-              console.log("Print dialog opened");
-              setTimeout(() => {
-                window.close();
-              }, 1000);
-            } catch(err) {
-              console.error("Error during print:", err);
-              alert("There was an error when trying to print. Please try again.");
+            
+            // Handle image loading error
+            function handleImageError(img) {
+              console.error("Failed to load image:", img.src);
+              // Create a fallback text to show instead of image
+              const container = img.parentNode;
+              const fallbackDiv = document.createElement('div');
+              fallbackDiv.style.position = 'absolute';
+              fallbackDiv.style.top = '0';
+              fallbackDiv.style.left = '0';
+              fallbackDiv.style.width = '100%';
+              fallbackDiv.style.height = '100%';
+              fallbackDiv.style.backgroundColor = '#2c3e50';
+              fallbackDiv.style.zIndex = '1';
+              container.appendChild(fallbackDiv);
+              
+              // Add company name as text
+              const companyText = document.createElement('div');
+              companyText.textContent = "ACD Corporation";
+              companyText.style.position = 'absolute';
+              companyText.style.top = '20px';
+              companyText.style.left = '30px';
+              companyText.style.color = 'white';
+              companyText.style.fontWeight = 'bold';
+              companyText.style.zIndex = '2';
+              container.appendChild(companyText);
+              
+              // After a short delay to ensure everything is ready, print the page
+              setTimeout(printAndClose, 800);
             }
-          }
-        </script>
-      </body>
-      </html>
-    `);
-    
-    // Close the document to finish writing
-    printWindow.document.close();
-  }
-};
+            
+            // Function to generate the QR code
+            function generateQR() {
+              try {
+                // Create QR code
+                new QRCode(document.getElementById("qrcode"), {
+                  text: ${JSON.stringify(qrData)},
+                  width: 80,
+                  height: 80,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.H
+                });
+                console.log("QR code generated successfully");
+              } catch(err) {
+                console.error("Error generating QR code:", err);
+              }
+            }
+            
+            // Function to print and close the window
+            function printAndClose() {
+              try {
+                window.print();
+                console.log("Print dialog opened");
+                setTimeout(() => {
+                  window.close();
+                }, 1000);
+              } catch(err) {
+                console.error("Error during print:", err);
+                alert("There was an error when trying to print. Please try again.");
+              }
+            }
+          </script>
+        </body>
+        </html>
+      `);
+      
+      // Close the document to finish writing
+      printWindow.document.close();
+    }
+  };
+  
   // If no modal state or no item selected, don't render anything
   if (!showViewItemModal || !selectedItem) return null;
 
@@ -430,56 +452,58 @@ const handlePrintSticker = () => {
               </div>
               
               {/* QR Code section moved here - below PO Number and CTPL Number */}
-              <div className="item-qr-section">
-                <div className="section-header">
-                  <i className="fas fa-qrcode"></i>
-                  <h4>Item QR Code</h4>
-                </div>
-                <p className="qr-description">
-                  Scan this QR code to quickly access item details
-                </p>
-                <div className="qr-content">
-                  <div className="qr-code-frame">
-                    <QRCodeSVG 
-                      id="item-qr-code"
-                      value={generateQRData()}
-                      size={130}
-                      level="H"
-                      includeMargin={true}
-                      bgColor="#FFFFFF"
-                      fgColor="#000000"
-                    />
-                  </div>
-                  <div className="qr-code-info">
-                    <div className="qr-info-item">
-                      <i className="fas fa-info-circle"></i>
-                      <span>Contains all item data</span>
-                    </div>
-                    <div className="qr-info-item">
-                      <i className="fas fa-tag"></i>
-                      <span>ID: {selectedItem.id}</span>
-                    </div>
-                    <div className="qr-info-item">
-                      <i className="fas fa-barcode"></i>
-                      <span>Part #: {selectedItem.partsNumber}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="qr-actions">
-                  <button 
-                    className="qr-action-btn view-btn"
-                    onClick={openQRModal}
-                  >
-                    <i className="fas fa-expand-alt"></i> View Larger
-                  </button>
-                  <button 
-                    className="qr-action-btn print-btn"
-                    onClick={openStickerModal}
-                  >
-                    <i className="fas fa-print"></i> Print Sticker
-                  </button>
-                </div>
-              </div>
+
+
+<div className={`item-qr-section ${isDarkMode ? 'dark-mode' : ''}`}>
+  <div className="section-header">
+    <i className="fas fa-qrcode"></i>
+    <h4>Item QR Code</h4>
+  </div>
+  <p className="qr-description">
+    Scan this QR code to quickly access item details
+  </p>
+  <div className="qr-content">
+    <div className={`qr-code-frame ${isDarkMode ? 'dark-mode' : ''}`}>
+      <QRCodeSVG 
+        id="item-qr-code"
+        value={generateQRData()}
+        size={130}
+        level="H"
+        includeMargin={true}
+        bgColor={isDarkMode ? "#1a2a48" : "#FFFFFF"}
+        fgColor={isDarkMode ? "#FFFFFF" : "#000000"}
+      />
+    </div>
+    <div className="qr-code-info">
+      <div className="qr-info-item">
+        <i className="fas fa-info-circle"></i>
+        <span>Contains all item data</span>
+      </div>
+      <div className="qr-info-item">
+        <i className="fas fa-tag"></i>
+        <span>ID: {selectedItem.id}</span>
+      </div>
+      <div className="qr-info-item">
+        <i className="fas fa-barcode"></i>
+        <span>Part #: {selectedItem.partsNumber}</span>
+      </div>
+    </div>
+  </div>
+  <div className="qr-actions">
+    <button 
+      className="qr-action-btn view-btn"
+      onClick={openQRModal}
+    >
+      <i className="fas fa-expand-alt"></i> View Larger
+    </button>
+    <button 
+      className="qr-action-btn print-btn"
+      onClick={openStickerModal}
+    >
+      <i className="fas fa-print"></i> Print Sticker
+    </button>
+  </div>
+</div>
             </div>
           </div>
           
@@ -602,93 +626,73 @@ const handlePrintSticker = () => {
         </div>
       )}
       
-      {/* Sticker Preview Modal - Simplified version that matches your screenshot */}
+      {/* Sticker Preview Modal - With dark mode support using CSS classes */}
       {showStickerModal && (
         <div 
-          className={`sticker-modal-overlay ${isStickerModalVisible ? 'visible' : ''}`}
+          className={`modal-overlay sticker-modal-overlay ${isStickerModalVisible ? 'visible' : ''}`}
           onClick={closeStickerModal}
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
             zIndex: 1100,
-            opacity: isStickerModalVisible ? 1 : 0,
-            transition: 'opacity 0.3s ease'
+            backdropFilter: 'blur(4px)'
           }}
         >
           <div 
             className={`sticker-modal-content ${isStickerModalVisible ? 'visible' : ''}`}
             onClick={e => e.stopPropagation()}
             style={{
-              backgroundColor: '#fff',
-              borderRadius: '8px',
-              boxShadow: '0 5px 15px rgba(0, 0, 0, 0.3)',
               width: '360px',
               maxWidth: '95%',
-              transform: isStickerModalVisible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'transform 0.3s ease',
+              borderRadius: '8px',
               overflow: 'hidden',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              transform: isStickerModalVisible ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'transform 0.3s ease',
+              backgroundColor: isDarkMode ? '#1a2a48' : '#fff',
+              boxShadow: isDarkMode ? '0 5px 15px rgba(0, 0, 0, 0.5)' : '0 5px 15px rgba(0, 0, 0, 0.3)',
+              border: isDarkMode ? '1px solid #2a3a5a' : 'none'
             }}
           >
-            {/* Header - Matching the style from your screenshot */}
+            {/* Header */}
             <div style={{
               padding: '10px 15px',
-              borderBottom: '1px solid #e0e0e0',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: '#2980b9', // Blue header matching your screenshot
-              color: 'white'
+              backgroundColor: isDarkMode ? '#1f3a60' : '#2980b9', 
+              color: 'white',
+              borderBottom: isDarkMode ? '1px solid #2a3a5a' : '1px solid #e0e0e0'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fas fa-tag" style={{ fontSize: '16px' }}></i>
                 <span style={{ fontSize: '18px', fontWeight: '500' }}>Sticker Preview</span>
               </div>
               <button 
+                className="close-button-enhanced"
                 onClick={closeStickerModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '50%'
-                }}
               >
                 <i className="fas fa-times"></i>
               </button>
             </div>
             
-            {/* Sticker Preview Content - Matches your screenshot */}
+            {/* Sticker Preview Content */}
             <div style={{
               padding: '20px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              backgroundColor: '#f8f9fa'
+              backgroundColor: isDarkMode ? '#15203b' : '#f8f9fa'
             }}>
-              {/* Sticker Preview Image */}
+              {/* Sticker Preview */}
               <div style={{
                 position: 'relative',
                 width: '320px',
                 height: '190px',
                 marginBottom: '20px',
                 borderRadius: '4px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                boxShadow: isDarkMode ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.15)',
+                border: isDarkMode ? '1px solid #2a3a5a' : '1px solid #ddd'
               }}>
                 {/* Background image */}
                 <img 
@@ -704,7 +708,7 @@ const handlePrintSticker = () => {
                   }}
                 />
                 
-                {/* Part Number - positioned to match your screenshot */}
+                {/* Part Number */}
                 <div style={{
                   position: 'absolute',
                   top: '70px',
@@ -717,7 +721,7 @@ const handlePrintSticker = () => {
                   {selectedItem.partsNumber}
                 </div>
                 
-                {/* Part Name - positioned to match your screenshot */}
+                {/* Part Name */}
                 <div style={{
                   position: 'absolute',
                   top: '100px',
@@ -733,7 +737,7 @@ const handlePrintSticker = () => {
                   {selectedItem.partsName}
                 </div>
                 
-                {/* QR Code - positioned to match your screenshot */}
+                {/* QR Code */}
                 <div style={{
                   position: 'absolute',
                   top: '50px',
@@ -753,26 +757,38 @@ const handlePrintSticker = () => {
                   />
                 </div>
               </div>
+              
+              {/* Dark mode note */}
+              {isDarkMode && (
+                <div style={{
+                  marginBottom: '15px',
+                  fontSize: '12px',
+                  color: '#a0aec0',
+                  textAlign: 'center',
+                  backgroundColor: '#1f2c3d',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  width: '100%'
+                }}>
+                  <i className="fas fa-info-circle" style={{ marginRight: '5px' }}></i>
+                  Note: The printed sticker will maintain its light appearance regardless of dark mode.
+                </div>
+              )}
             </div>
             
-            {/* Footer Buttons - matching your screenshot */}
-            <div style={{
+            {/* Footer */}
+            <div className="modal-footer-enhanced" style={{
               padding: '15px 20px',
-              borderTop: '1px solid #e0e0e0',
               display: 'flex',
               justifyContent: 'flex-end',
               gap: '10px',
-              backgroundColor: 'white'
+              backgroundColor: isDarkMode ? '#15203b' : 'white',
+              borderTop: isDarkMode ? '1px solid #2a3a5a' : '1px solid #e0e0e0'
             }}>
               <button 
+                className="btn btn-primary"
                 onClick={handlePrintSticker}
                 style={{
-                  backgroundColor: '#3498db',
-                  color: 'white',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
@@ -782,14 +798,9 @@ const handlePrintSticker = () => {
                 <i className="fas fa-print"></i> Print Sticker
               </button>
               <button 
+                className="btn btn-secondary"
                 onClick={closeStickerModal}
                 style={{
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'

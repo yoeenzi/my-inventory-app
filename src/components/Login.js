@@ -1,9 +1,11 @@
 // src/components/Login.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 import '../styles/DashboardStyles.css';
 
 // Enhanced Login component with curvy design elements
 const Login = ({ onLogin }) => {
+  const { isDarkMode, toggleDarkMode } = useContext(AppContext);
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
@@ -12,7 +14,6 @@ const Login = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -25,10 +26,9 @@ const Login = ({ onLogin }) => {
     if (error) setError('');
   };
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.body.classList.toggle('dark-mode');
+  // Handle dark mode toggle
+  const handleToggleDarkMode = () => {
+    toggleDarkMode(!isDarkMode);
   };
 
   // Handle form submission
@@ -173,7 +173,7 @@ const Login = ({ onLogin }) => {
           
           {/* Theme Toggle */}
           <div className="login-theme-toggle">
-            <button onClick={toggleDarkMode} className="theme-toggle-btn">
+            <button onClick={handleToggleDarkMode} className="theme-toggle-btn">
               <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
               {isDarkMode ? 'Light Mode' : 'Dark Mode'}
             </button>

@@ -1,5 +1,5 @@
-// src/App.js
-import React, { useContext, useState } from 'react';
+// src/App.js - Updated dark mode application
+import React, { useContext, useState, useEffect } from 'react';
 import { AppContext } from './context/AppContext';
 
 // Import components
@@ -52,16 +52,12 @@ function App() {
 
   // If not authenticated, show login page
   if (!isAuthenticated) {
-    return (
-      <div className={isDarkMode ? 'dark-mode' : ''}>
-        <Login onLogin={handleLogin} />
-      </div>
-    );
+    return <Login onLogin={handleLogin} />;
   }
 
   // If authenticated, show the main app
   return (
-    <div className={`app ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div className="app">
       <Sidebar />
       
       <div className="main-content">
